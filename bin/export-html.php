@@ -9,6 +9,21 @@
 require_once __DIR__ . '/../data/config.php';
 require_once 'HTTP/Request2.php';
 
+$htmlTemplate = <<<HTM
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <title>%TITLE%</title>
+ </head>
+ <body>
+%BODY%
+ </body>
+</html>
+
+HTM;
+
+
 $http = new HTTP_Request2();
 $http->setConfig(
     array(
@@ -34,6 +49,14 @@ foreach ($projects as $project) {
     )->send();
     $issues = json_decode($ires->getBody())->issues;
     echo sprintf(" %d issues\n", count($issues));
+    createIssueIndex($project, $issues);
+    downloadIssues($issues);
+}
+
+function downloadIssues(array $issues)
+{
+    global $http, $jira_url, $export_dir;
+
     echo ' ';
     foreach ($issues as $issue) {
         echo '.';
@@ -49,5 +72,31 @@ foreach ($projects as $project) {
         );
     }
     echo "\n";
+}
+
+function createIssueIndex($project, $issues)
+{
+    global $export_dir, $htmlTemplate;
+
+    $title = sprintf('%s: %s', $project->key, $project->name);
+    $body = '<h1>' . $title . "</h1>\n"
+        . "<ul>\n";
+
+    //fixme: sort by key first
+    foreach ($issues as $issue) {
+        $body .= '<li>'
+            . '<a href="' . $issue->key . '.html">'
+            . $issue->key . ': '
+            . htmlspecialchars($issue->fields->summary)
+            . '</a>'
+            . "</li>\n";
+    }
+    $body .= "</ul>\n";
+
+    $html = str_replace('%TITLE%', $title, $htmlTemplate);
+    file_put_contents(
+        $export_dir . $project->key . '.html',
+        str_replace('%BODY%', $body, $html)
+    );
 }
 ?>
