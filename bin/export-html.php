@@ -50,9 +50,15 @@ foreach ($projects as $project) {
         . '?startAt=0'
         . '&maxResults=1000'
         . '&fields=key,updated,summary,parent'
-        . '&jql=project%3D' . urlencode($project->key)
+        . '&jql=project%3D%22' . urlencode($project->key) . '%22'
     )->send();
-    $issues = json_decode($ires->getBody())->issues;
+
+    $obj = json_decode($ires->getBody());
+    if (!isset($obj->issues)) {
+        continue;
+    }
+
+    $issues = $obj->issues;
     echo sprintf(" %d issues\n", count($issues));
     createIssueIndex($project, $issues);
     downloadIssues($issues);
