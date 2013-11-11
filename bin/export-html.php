@@ -23,6 +23,7 @@ $htmlTemplate = <<<HTM
 
 HTM;
 
+$start = time();
 
 $http = new HTTP_Request2();
 $http->setConfig(
@@ -36,6 +37,7 @@ $http->setAuth($jira_user, $jira_password, HTTP_Request2::AUTH_BASIC);
 $hpr = clone $http;
 $pres = $hpr->setUrl($jira_url . 'rest/api/2/project')->send();
 $projects = json_decode($pres->getBody());
+createProjectIndex($projects);
 foreach ($projects as $project) {
     echo sprintf("%s - %s\n", $project->key, $project->name);
     //fetch all issues
@@ -44,7 +46,7 @@ foreach ($projects as $project) {
         $jira_url . 'rest/api/2/search'
         . '?startAt=0'
         . '&maxResults=1000'
-        . '&fields=key,updated,summary'
+        . '&fields=key,updated,summary,parent'
         . '&jql=project%3D' . urlencode($project->key)
     )->send();
     $issues = json_decode($ires->getBody())->issues;
@@ -53,25 +55,89 @@ foreach ($projects as $project) {
     downloadIssues($issues);
 }
 
+//so we only have to update next time instead of exporting everything again
+file_put_contents($export_dir . 'last-update', date('c', $start));
+
 function downloadIssues(array $issues)
 {
     global $http, $jira_url, $export_dir;
 
     echo ' ';
     foreach ($issues as $issue) {
-        echo '.';
+        $file = $export_dir . $issue->key . '.html';
+
+        if (file_exists($file)) {
+            $iDate = strtotime($issue->fields->updated);
+            $fDate = filemtime($file);
+            if ($iDate < $fDate) {
+                echo '.';
+                continue;
+            }
+        }
+
+        echo 'n';
         $hd = clone $http;
         $idres = $hd->setUrl(
             $jira_url . 'si/jira.issueviews:issue-html/'
             . $issue->key . '/' . $issue->key . '.html'
         )->send();
         //FIXME: check response type
-        file_put_contents(
-            $export_dir . $issue->key . '.html',
-            $idres->getBody()
-        );
+        file_put_contents($file, $idres->getBody());
     }
     echo "\n";
+}
+
+function createProjectIndex($projects)
+{
+    global $export_dir, $htmlTemplate;
+
+    $categories = array();
+    foreach ($projects as $project) {
+        list($category) = explode(':', $project->name);
+        $categories[$category][] = $project;
+    }
+    foreach (array_keys($categories) as $category) {
+        if (count($categories[$category]) == 1) {
+            $categories['others'][] = $categories[$category][0];
+            unset($categories[$category]);
+        }
+    }
+
+    $title = 'JIRA project list';
+    $body = '<h1>' . $title . "</h1>\n";
+
+    $lastCategory = null;
+    foreach ($categories as $category => $projects) {
+        $body .= '<h2>' . htmlspecialchars($category) . '</h2>'
+            . "<table border='0'>\n";
+        usort($projects, 'compareProjects');
+        foreach ($projects as $project) {
+            $body .= '<tr>'
+                . '<td>'
+                . sprintf(
+                    '<img src="%s" alt="" width="16" height="16"/> ',
+                    htmlspecialchars($project->avatarUrls->{'16x16'})
+                )
+                . '</td>'
+                . '<td>'
+                . '<a href="' . $project->key . '.html">'
+                . $project->key
+                . '</a>'
+                . '</td>'
+                . '<td>'
+                . '<a href="' . $project->key . '.html">'
+                . htmlspecialchars($project->name)
+                . '</a>'
+                . "</td></tr>\n";
+        }
+        $body .= "</table>\n";
+    }
+
+    $html = str_replace('%TITLE%', $title, $htmlTemplate);
+    file_put_contents(
+        $export_dir . 'index.html',
+        str_replace('%BODY%', $body, $html)
+    );
 }
 
 function createIssueIndex($project, $issues)
@@ -82,14 +148,28 @@ function createIssueIndex($project, $issues)
     $body = '<h1>' . $title . "</h1>\n"
         . "<ul>\n";
 
-    //fixme: sort by key first
+    usort($issues, 'compareIssuesByParentAndKey');
+    $bInParent = false;
+    $bClose = false;
     foreach ($issues as $issue) {
+        if (isset($issue->fields->parent) && !$bInParent) {
+            $body .= "<ul>\n";
+            $bInParent = true;
+        } else if (!isset($issue->fields->parent) && $bInParent) {
+            $body .= "</ul>\n</li>\n";
+            $bInParent = false;
+        } else if ($bClose) {
+            $body .= "</li>\n";
+        }
         $body .= '<li>'
             . '<a href="' . $issue->key . '.html">'
             . $issue->key . ': '
             . htmlspecialchars($issue->fields->summary)
-            . '</a>'
-            . "</li>\n";
+            . '</a>';
+        $bClose = true;
+    }
+    if ($bClose) {
+        $body .= "</li>\n";
     }
     $body .= "</ul>\n";
 
@@ -98,5 +178,45 @@ function createIssueIndex($project, $issues)
         $export_dir . $project->key . '.html',
         str_replace('%BODY%', $body, $html)
     );
+}
+
+/**
+ * Jira does not support retrieving the project category via the API:
+ * https://jira.atlassian.com/browse/JRA-30001
+ * So we split the title by ":", assuming that the category/customer name
+ * is in there like "Customer name: Project title"
+ */
+function compareProjects($a, $b)
+{
+    list($aC) = explode(':', $a->name, 2);
+    list($bC) = explode(':', $b->name, 2);
+
+    if ($aC != $bC) {
+        return strnatcmp($aC, $bC);
+    } else {
+        return strnatcmp($a->name, $b->name);
+    }
+}
+
+function compareIssuesByParentAndKey($a, $b)
+{
+    if (isset($a->fields->parent) && isset($b->fields->parent)) {
+        if ($a->fields->parent->key == $b->fields->parent->key) {
+            return strnatcmp($a->key, $b->key);
+        }
+        return strnatcmp($a->fields->parent->key, $b->fields->parent->key);
+    } else if (isset($a->fields->parent)) {
+        if ($a->fields->parent->key == $b->key) {
+            return 1;
+        }
+        return strnatcmp($a->fields->parent->key, $b->key);
+    } else if (isset($b->fields->parent)) {
+        if ($a->key == $b->fields->parent->key) {
+            return -1;
+        }
+        return strnatcmp($a->key, $b->fields->parent->key);
+    } else {
+        return strnatcmp($a->key, $b->key);
+    }
 }
 ?>
