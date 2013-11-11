@@ -4,6 +4,9 @@
  * Export all issues from JIRA into static HTML files.
  * They can then be indexed by the search engine.
  *
+ * Note that we do not link to .html files since I want to be able
+ * to map static => real JIRA URLs by replacing a prefix.
+ *
  * @author Christian Weiske <christian.weiske@netresearch.de>
  */
 require_once __DIR__ . '/../data/config.php';
@@ -120,12 +123,12 @@ function createProjectIndex($projects)
                 )
                 . '</td>'
                 . '<td>'
-                . '<a href="' . $project->key . '.html">'
+                . '<a href="' . $project->key . '">'
                 . $project->key
                 . '</a>'
                 . '</td>'
                 . '<td>'
-                . '<a href="' . $project->key . '.html">'
+                . '<a href="' . $project->key . '">'
                 . htmlspecialchars($project->name)
                 . '</a>'
                 . "</td></tr>\n";
@@ -162,7 +165,7 @@ function createIssueIndex($project, $issues)
             $body .= "</li>\n";
         }
         $body .= '<li>'
-            . '<a href="' . $issue->key . '.html">'
+            . '<a href="' . $issue->key . '">'
             . $issue->key . ': '
             . htmlspecialchars($issue->fields->summary)
             . '</a>';
