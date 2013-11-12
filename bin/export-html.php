@@ -165,6 +165,9 @@ function createIssueIndex($project, $issues)
             $body .= "<ul>\n";
             $bInParent = true;
         } else if (!isset($issue->fields->parent) && $bInParent) {
+            if ($bClose) {
+                $body .= "</li>\n";
+            }
             $body .= "</ul>\n</li>\n";
             $bInParent = false;
         } else if ($bClose) {
