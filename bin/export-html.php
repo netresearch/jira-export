@@ -129,12 +129,12 @@ function createProjectIndex($projects)
                 )
                 . '</td>'
                 . '<td>'
-                . '<a href="' . $project->key . '">'
+                . '<a href="' . $project->key . '.html">'
                 . $project->key
                 . '</a>'
                 . '</td>'
                 . '<td>'
-                . '<a href="' . $project->key . '">'
+                . '<a href="' . $project->key . '.html">'
                 . htmlspecialchars($project->name)
                 . '</a>'
                 . "</td></tr>\n";
@@ -174,7 +174,7 @@ function createIssueIndex($project, $issues)
             $body .= "</li>\n";
         }
         $body .= '<li>'
-            . '<a href="' . $issue->key . '">'
+            . '<a href="' . $issue->key . '.html">'
             . $issue->key . ': '
             . htmlspecialchars($issue->fields->summary)
             . '</a>';
