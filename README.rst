@@ -24,9 +24,20 @@ Setup
 ============
 Dependencies
 ============
-HTTP_Request2 from PEAR::
+
+* PHP
+* HTTP_Request2 from PEAR::
 
     $ pear install http_request2
+
+
+=============
+Similar tools
+=============
+
+* `Gigan`__ - Parse JIRA XML into CouchDB
+
+__ https://github.com/janl/gigan
 
 
 =================
