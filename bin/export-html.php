@@ -288,42 +288,22 @@ function createIssueIndex(Iterator $issues, $project)
     $body = '<h1>' . $title . "</h1>\n"
         . '<p><a href="' . htmlspecialchars($purl) . '">'
         . htmlspecialchars($project->key) . ' in Jira'
-        . "</a></p>\n"
-        . "<ul>\n";
+        . "</a></p>\n";
 
     $arIssues = array();
+    $count = 0;
     foreach ($issues as $issue) {
-        $arIssues[] = $issue;
-    }
-    echo sprintf(" %d issues\n", count($arIssues));
-    usort($arIssues, 'compareIssuesByParentAndKey');
-    $bInParent = false;
-    $bClose = false;
-    foreach ($arIssues as $issue) {
-        if (isset($issue->fields->parent) && !$bInParent) {
-            $body .= "<ul>\n";
-            $bInParent = true;
-        } else if (!isset($issue->fields->parent) && $bInParent) {
-            if ($bClose) {
-                $body .= "</li>\n";
-            }
-            $body .= "</ul>\n</li>\n";
-            $bInParent = false;
-        } else if ($bClose) {
-            $body .= "</li>\n";
+        ++$count;
+        if (isset($issue->fields->parent)) {
+            $arIssues[$issue->fields->parent->key]['children']
+                [$issue->key]['issue'] = $issue;
+        } else {
+            $arIssues[$issue->key]['issue'] = $issue;
         }
-        $body .= '<li>'
-            . '<a href="' . $issue->key . '.html">'
-            . $issue->key . ': '
-            . htmlspecialchars($issue->fields->summary)
-            . '</a>';
-        $bClose = true;
     }
-    if ($bClose) {
-        $body .= "</li>\n";
-    }
-    $body .= "</ul>\n";
+    echo sprintf(" %d issues\n", $count);
 
+    $body .= renderIssuesList($arIssues);
     $body .= getLastUpdateHtml();
 
     $html = str_replace('%TITLE%', $title, $htmlTemplate);
@@ -335,6 +315,26 @@ function createIssueIndex(Iterator $issues, $project)
             $html
         )
     );
+}
+
+function renderIssuesList($arIssues)
+{
+    $html = "<ul>\n";
+    uksort($arIssues, 'strnatcmp');
+    foreach ($arIssues as $arIssue) {
+        $issue = $arIssue['issue'];
+        $html .= '<li>'
+            . '<a href="' . $issue->key . '.html">'
+            . $issue->key . ': '
+            . htmlspecialchars($issue->fields->summary)
+            . '</a>';
+        if (isset($arIssue['children']) && count($arIssue['children'])) {
+            $html .= renderIssuesList($arIssue['children']);
+        }
+        $html .= "</li>\n";
+    }
+    $html .= "</ul>\n";
+    return $html;
 }
 
 /**
@@ -352,28 +352,6 @@ function compareProjects($a, $b)
         return strnatcmp($aC, $bC);
     } else {
         return strnatcmp($a->name, $b->name);
-    }
-}
-
-function compareIssuesByParentAndKey($a, $b)
-{
-    if (isset($a->fields->parent) && isset($b->fields->parent)) {
-        if ($a->fields->parent->key == $b->fields->parent->key) {
-            return strnatcmp($a->key, $b->key);
-        }
-        return strnatcmp($a->fields->parent->key, $b->fields->parent->key);
-    } else if (isset($a->fields->parent)) {
-        if ($a->fields->parent->key == $b->key) {
-            return 1;
-        }
-        return strnatcmp($a->fields->parent->key, $b->key);
-    } else if (isset($b->fields->parent)) {
-        if ($a->key == $b->fields->parent->key) {
-            return -1;
-        }
-        return strnatcmp($a->key, $b->fields->parent->key);
-    } else {
-        return strnatcmp($a->key, $b->key);
     }
 }
 
