@@ -40,6 +40,77 @@ html, body {
 
 HTM;
 
+class PagingJsonIterator implements Iterator
+{
+    protected $http;
+    protected $url;
+    protected $pageSize;
+    protected $totalCount;
+
+    public $jsonVarTotal = 'total';
+    public $jsonVarStartAt = 'startAt';
+    public $jsonVarPageSize = 'maxResults';
+    public $jsonVarData = 'issues';
+
+    public function __construct(HTTP_Request2 $http, $url, $pageSize = 50)
+    {
+        $this->http = $http;
+        $this->url = $url;
+        $this->pageSize = $pageSize;
+    }
+
+    public function rewind()
+    {
+        $this->position = 0;
+        $this->loadData();
+    }
+
+    public function current()
+    {
+        return $this->data[$this->position - $this->dataPos];
+    }
+
+    public function key()
+    {
+        return $this->position;
+    }
+
+    public function next()
+    {
+        ++$this->position;
+    }
+
+    public function valid()
+    {
+        if (isset($this->data[$this->position - $this->dataPos])) {
+            return true;
+        }
+        if ($this->position >= $this->totalCount) {
+            //no more data
+            return false;
+        }
+        $this->loadData();
+        return isset($this->data[$this->position - $this->dataPos]);
+    }
+
+    protected function loadData()
+    {
+        $hreq = clone $this->http;
+        $hreq->setUrl(
+            str_replace(
+                array('{startAt}', '{pageSize}'),
+                array($this->position, $this->pageSize),
+                $this->url
+            )
+        );
+        $res = $hreq->send();
+        $obj = json_decode($res->getBody());
+        $this->totalCount = $obj->{$this->jsonVarTotal};
+        $this->data = $obj->{$this->jsonVarData};
+        $this->dataPos = $this->position;
+    }
+}
+
 $lufile = $export_dir . 'last-update';
 $start = time();
 
@@ -58,18 +129,18 @@ if (file_exists($lufile)) {
     $lutime = strtotime(file_get_contents($lufile));
     echo "Fetching projects updated since last export\n";
     if (time() - $lutime <= 14 * 86400) {
-        $hpr = clone $http;
-        $pres = $hpr->setUrl(
+        $pi = new PagingJsonIterator(
+            $http,
             $jira_url . 'rest/api/2/search'
-            . '?startAt=0'
-            . '&maxResults=1000'
+            . '?startAt={startAt}'
+            . '&maxResults={pageSize}'
             . '&fields=key'
             . '&jql=' . urlencode(
                 'updated >= "' . date('Y-m-d H:i', $lutime) . '"'
-            )
-        )->send();
-        $upissues = json_decode($pres->getBody());
-        foreach ($upissues->issues as $issue) {
+            ),
+            500
+        );
+        foreach ($pi as $issue) {
             list($pkey,) = explode('-', $issue->key);
             $updatedProjects[$pkey] = true;
         }
@@ -90,30 +161,24 @@ foreach ($projects as $project) {
     }
     echo sprintf("%s - %s\n", $project->key, $project->name);
     //fetch all issues
-    $hi = clone $http;
-    $ires = $hi->setUrl(
+    $pi = new PagingJsonIterator(
+        $http,
         $jira_url . 'rest/api/2/search'
-        . '?startAt=0'
-        . '&maxResults=1000'
+        . '?startAt={startAt}'
+        . '&maxResults={pageSize}'
         . '&fields=key,updated,summary,parent'
-        . '&jql=project%3D%22' . urlencode($project->key) . '%22'
-    )->send();
+        . '&jql=project%3D%22' . urlencode($project->key) . '%22',
+        500
+    );
 
-    $obj = json_decode($ires->getBody());
-    if (!isset($obj->issues)) {
-        continue;
-    }
-
-    $issues = $obj->issues;
-    echo sprintf(" %d issues\n", count($issues));
-    createIssueIndex($issues, $project);
-    downloadIssues($issues, $project);
+    createIssueIndex($pi, $project);
+    downloadIssues($pi, $project);
 }
 
 //so we only have to update next time instead of exporting everything again
 file_put_contents($lufile, date('c', $start));
 
-function downloadIssues(array $issues, $project)
+function downloadIssues(Iterator $issues, $project)
 {
     global $http, $jira_url, $export_dir;
 
@@ -213,7 +278,7 @@ function createProjectIndex($projects)
     );
 }
 
-function createIssueIndex($issues, $project)
+function createIssueIndex(Iterator $issues, $project)
 {
     global $export_dir, $htmlTemplate, $jira_url, $topbar;
 
@@ -226,10 +291,15 @@ function createIssueIndex($issues, $project)
         . "</a></p>\n"
         . "<ul>\n";
 
-    usort($issues, 'compareIssuesByParentAndKey');
+    $arIssues = array();
+    foreach ($issues as $issue) {
+        $arIssues[] = $issue;
+    }
+    echo sprintf(" %d issues\n", count($arIssues));
+    usort($arIssues, 'compareIssuesByParentAndKey');
     $bInParent = false;
     $bClose = false;
-    foreach ($issues as $issue) {
+    foreach ($arIssues as $issue) {
         if (isset($issue->fields->parent) && !$bInParent) {
             $body .= "<ul>\n";
             $bInParent = true;
