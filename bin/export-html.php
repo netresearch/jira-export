@@ -18,9 +18,23 @@ $htmlTemplate = <<<HTM
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <title>%TITLE%</title>
+  <link rel="index" href="./"/>
+  <style type="text/css">
+html, body {
+    margin: 0px;
+    padding: 0px;
+    border: none;
+}
+#content {
+    margin: 2ex;
+}
+  </style>
  </head>
  <body>
+  %TOPBAR%
+  <div id="content">
 %BODY%
+  </div>
  </body>
 </html>
 
@@ -98,7 +112,7 @@ function downloadIssues(array $issues)
 
 function createProjectIndex($projects)
 {
-    global $export_dir, $htmlTemplate;
+    global $export_dir, $htmlTemplate, $jira_url, $topbar;
 
     $categories = array();
     foreach ($projects as $project) {
@@ -113,7 +127,10 @@ function createProjectIndex($projects)
     }
 
     $title = 'JIRA project list';
-    $body = '<h1>' . $title . "</h1>\n";
+    $body = '<h1>' . $title . "</h1>\n"
+        . '<p><a href="' . htmlspecialchars($jira_url) . '">'
+        . htmlspecialchars($jira_url)
+        . "</a></p>\n";
 
     $lastCategory = null;
     foreach ($categories as $category => $projects) {
@@ -142,19 +159,30 @@ function createProjectIndex($projects)
         $body .= "</table>\n";
     }
 
+    $body .= getLastUpdateHtml();
+
     $html = str_replace('%TITLE%', $title, $htmlTemplate);
     file_put_contents(
         $export_dir . 'index.html',
-        str_replace('%BODY%', $body, $html)
+        str_replace(
+            array('%TOPBAR%', '%BODY%'),
+            array($topbar, $body),
+            $html
+        )
     );
 }
 
 function createIssueIndex($project, $issues)
 {
-    global $export_dir, $htmlTemplate;
+    global $export_dir, $htmlTemplate, $jira_url, $topbar;
 
     $title = sprintf('%s: %s', $project->key, $project->name);
+
+    $purl = $jira_url . 'browse/' . $project->key;
     $body = '<h1>' . $title . "</h1>\n"
+        . '<p><a href="' . htmlspecialchars($purl) . '">'
+        . htmlspecialchars($project->key) . ' in Jira'
+        . "</a></p>\n"
         . "<ul>\n";
 
     usort($issues, 'compareIssuesByParentAndKey');
@@ -185,10 +213,16 @@ function createIssueIndex($project, $issues)
     }
     $body .= "</ul>\n";
 
+    $body .= getLastUpdateHtml();
+
     $html = str_replace('%TITLE%', $title, $htmlTemplate);
     file_put_contents(
         $export_dir . $project->key . '.html',
-        str_replace('%BODY%', $body, $html)
+        str_replace(
+            array('%TOPBAR%', '%BODY%'),
+            array($topbar, $body),
+            $html
+        )
     );
 }
 
@@ -230,5 +264,10 @@ function compareIssuesByParentAndKey($a, $b)
     } else {
         return strnatcmp($a->key, $b->key);
     }
+}
+
+function getLastUpdateHtml()
+{
+    return '<p>Last update: ' . date('c') . "</p>\n";
 }
 ?>

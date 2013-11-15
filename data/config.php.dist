@@ -3,4 +3,5 @@ $jira_user = 'FIXME';
 $jira_password = 'FIXME';
 $jira_url = 'https://jira.example.com/jira/';
 $export_dir = __DIR__ . '/../www/';
+$topbar = '';
 ?>
