@@ -87,6 +87,11 @@ function downloadIssues(array $issues, $project)
 
     echo ' ';
     foreach ($issues as $issue) {
+        if (!isset($issue->key) || $issue->key == '') {
+            echo 'x';
+            continue;
+        }
+
         $file = $export_dir . $issue->key . '.html';
 
         if (file_exists($file)) {
