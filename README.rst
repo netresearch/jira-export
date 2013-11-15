@@ -8,6 +8,10 @@ HTML files.
 This static files can be indexed by an intranet search engine
 easily, without having to setup autologin in JIRA.
 
+The first export will take quite some time.
+After that initial run, only projects with modifications since the last
+export will get updated, which makes it possible to run the export
+as cronjob every 15 minutes.
 
 =====
 Setup

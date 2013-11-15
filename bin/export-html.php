@@ -40,6 +40,7 @@ html, body {
 
 HTM;
 
+$lufile = $export_dir . 'last-update';
 $start = time();
 
 $http = new HTTP_Request2();
@@ -50,12 +51,43 @@ $http->setConfig(
 );
 $http->setAuth($jira_user, $jira_password, HTTP_Request2::AUTH_BASIC);
 
+$updatedProjects = array();
+$hasUpdated = false;
+if (file_exists($lufile)) {
+    //fetch list of projects updated since last export
+    $lutime = strtotime(file_get_contents($lufile));
+    echo "Fetching projects updated since last export\n";
+    if (time() - $lutime <= 14 * 86400) {
+        $hpr = clone $http;
+        $pres = $hpr->setUrl(
+            $jira_url . 'rest/api/2/search'
+            . '?startAt=0'
+            . '&maxResults=1000'
+            . '&fields=key'
+            . '&jql=' . urlencode(
+                'updated >= "' . date('Y-m-d H:i', $lutime) . '"'
+            )
+        )->send();
+        $upissues = json_decode($pres->getBody());
+        foreach ($upissues->issues as $issue) {
+            list($pkey,) = explode('-', $issue->key);
+            $updatedProjects[$pkey] = true;
+        }
+        ksort($updatedProjects);
+        $hasUpdated = count($updatedProjects) > 0;
+        echo sprintf(" Found %d projects.\n", count($updatedProjects));
+    }
+}
+
 //fetch projects
 $hpr = clone $http;
 $pres = $hpr->setUrl($jira_url . 'rest/api/2/project')->send();
 $projects = json_decode($pres->getBody());
 createProjectIndex($projects);
 foreach ($projects as $project) {
+    if ($hasUpdated && !isset($updatedProjects[$project->key])) {
+        continue;
+    }
     echo sprintf("%s - %s\n", $project->key, $project->name);
     //fetch all issues
     $hi = clone $http;
@@ -79,7 +111,7 @@ foreach ($projects as $project) {
 }
 
 //so we only have to update next time instead of exporting everything again
-file_put_contents($export_dir . 'last-update', date('c', $start));
+file_put_contents($lufile, date('c', $start));
 
 function downloadIssues(array $issues, $project)
 {
