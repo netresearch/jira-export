@@ -147,6 +147,9 @@ if (file_exists($lufile)) {
         ksort($updatedProjects);
         $hasUpdated = count($updatedProjects) > 0;
         echo sprintf(" Found %d projects.\n", count($updatedProjects));
+        if (!$hasUpdated) {
+            exit();
+        }
     }
 }
 
