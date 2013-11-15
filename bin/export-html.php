@@ -74,14 +74,14 @@ foreach ($projects as $project) {
 
     $issues = $obj->issues;
     echo sprintf(" %d issues\n", count($issues));
-    createIssueIndex($project, $issues);
-    downloadIssues($issues);
+    createIssueIndex($issues, $project);
+    downloadIssues($issues, $project);
 }
 
 //so we only have to update next time instead of exporting everything again
 file_put_contents($export_dir . 'last-update', date('c', $start));
 
-function downloadIssues(array $issues)
+function downloadIssues(array $issues, $project)
 {
     global $http, $jira_url, $export_dir;
 
@@ -105,7 +105,11 @@ function downloadIssues(array $issues)
             . $issue->key . '/' . $issue->key . '.html'
         )->send();
         //FIXME: check response type
-        file_put_contents($file, $idres->getBody());
+
+        file_put_contents(
+            $file,
+            adjustIssueHtml($idres->getBody(), $project)
+        );
     }
     echo "\n";
 }
@@ -172,7 +176,7 @@ function createProjectIndex($projects)
     );
 }
 
-function createIssueIndex($project, $issues)
+function createIssueIndex($issues, $project)
 {
     global $export_dir, $htmlTemplate, $jira_url, $topbar;
 
@@ -269,5 +273,49 @@ function compareIssuesByParentAndKey($a, $b)
 function getLastUpdateHtml()
 {
     return '<p>Last update: ' . date('c') . "</p>\n";
+}
+
+function adjustIssueHtml($html, $project)
+{
+    global $jira_url, $topbar;
+    $html = str_replace(
+        array(
+            '<body>',
+            'Back to previous view',
+            //make project link local
+            'href="' . $jira_url . 'secure/BrowseProject.jspa?id=' . $project->id . '"',
+            //add project link
+            '<li class="toolbar-item">'
+        ),
+        array(
+            '<link rel="up" href="' . $project->key . '.html"/>'
+            . '<link rel="index" href="' . $project->key . '.html"/>'
+            . '<body>'
+            . $topbar,
+            'View issue in Jira',
+            'href="' . $project->key . '.html"',
+            '<li class="toolbar-item">'
+            . '<a href="' . $project->key . '.html" class="toolbar-trigger">All issues</a>'
+            . '</li>'
+            . '<li class="toolbar-item">'
+        ),
+        $html
+    );
+
+    //make issue links local (but not "View issue in Jira" link)
+    //dependencies
+    $html = preg_replace(
+        '#href="' . preg_quote($jira_url) . 'browse/([A-Z]+-[0-9]+)">#',
+        'href="\\1.html">',
+        $html
+    );
+    //issues within comments
+    $html = preg_replace(
+        '#href="' . preg_quote($jira_url) . 'browse/([A-Z]+-[0-9]+)" title=#',
+        'href="\\1.html" title=',
+        $html
+    );
+
+    return $html;
 }
 ?>
