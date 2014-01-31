@@ -432,42 +432,95 @@ function adjustIssueHtml($html, $project)
     }
 
     $html = str_replace(
+        '<body>',
+        <<<CSS
+<style type="text/css">
+/* jira 5.1 */
+.aui-toolbar .toolbar-split.toolbar-split-right {
+    float: none;
+}
+.aui-toolbar .toolbar-group {
+    margin-bottom: 0px;
+}
+#previous-view, .previous-view {
+    padding-top: 16px;
+    padding-bottom: 5px;
+}
+/* jira 4.4 */
+.previous-view > a {
+    background: linear-gradient(to bottom,#fff 0,#f2f2f2 100%);
+    border-color: #ccc;
+    border-style: solid;
+    border-width: 1px;
+    color: #333;
+    font-weight: normal;
+    display: inline-block;
+    margin: 0;
+    padding: 4px 10px;
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+}
+</style>
+CSS
+        . '<link rel="up" href="' . $project->key . '.html"/>'
+        . '<link rel="index" href="' . $project->key . '.html"/>'
+        . '<body>'
+        . $topbar,
+        $html
+    );
+    $html = str_replace(
         array(
-            '<body>',
             'Back to previous view',
-            //make project link local
-            'href="' . $jira_url . 'secure/BrowseProject.jspa?id=' . $project->id . '"',
-            //add project link
-            '<li class="toolbar-item">'
+            '&lt;&lt; Zur vorherigen Ansicht'
         ),
-        array(
-            '<link rel="up" href="' . $project->key . '.html"/>'
-            . '<link rel="index" href="' . $project->key . '.html"/>'
-            . '<body>'
-            . $topbar,
-            'View issue in Jira',
-            'href="' . $project->key . '.html"',
-            '<li class="toolbar-item">'
-            . '<a href="' . $project->key . '.html" class="toolbar-trigger">All issues</a>'
-            . '</li>'
-            . '<li class="toolbar-item">'
-        ),
+        'View issue in Jira', $html
+    );
+    $html = str_replace(
+        //make project link local
+        'href="' . $jira_url . 'secure/BrowseProject.jspa?id=' . $project->id . '"',
+        'href="' . $project->key . '.html"',
         $html
     );
 
+    if (strpos($html, '<li class="toolbar-item">') === false) {
+        //jira 4.4
+        $html = str_replace(
+            '<div class="previous-view">',
+            '<div class="previous-view">'
+            . '<a href="' . $project->key . '.html">All issues</a>',
+            $html
+        );
+    } else {
+        //jira 5.1
+        $html = str_replace(
+            //add project link
+            '<li class="toolbar-item">',
+            '<li class="toolbar-item">'
+            . '<a href="' . $project->key . '.html" class="toolbar-trigger">All issues</a>'
+            . '</li>'
+            . '<li class="toolbar-item">',
+            $html
+        );
+    }
+
     //make issue links local (but not "View issue in Jira" link)
     //dependencies
-    $html = preg_replace(
-        '#href="' . preg_quote($jira_url) . 'browse/([A-Z]+-[0-9]+)">#',
-        'href="\\1.html">',
-        $html
-    );
-    //issues within comments
-    $html = preg_replace(
-        '#href="' . preg_quote($jira_url) . 'browse/([A-Z]+-[0-9]+)" title=#',
-        'href="\\1.html" title=',
-        $html
-    );
+    $doc = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $doc->loadHTML($html);
+    $xpath   = new DOMXpath($doc);
+    $anchors = $xpath->query("/html/body/table//a[@href]");
+    $prefix  = $jira_url . 'browse/';
+    foreach ($anchors as $anchor) {
+        $href = $anchor->getAttribute("href");
+        if (substr($href, 0, strlen($prefix)) != $prefix) {
+            continue;
+        }
+        preg_match('#browse/([A-Z]+-[0-9]+)#', $href, $matches);
+        $issueId = $matches[1];
+        $anchor->setAttribute("href", $issueId . '.html');
+    }
+    $html = $xpath->document->saveHTML();
 
     return $html;
 }
