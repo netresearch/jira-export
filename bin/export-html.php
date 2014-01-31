@@ -8,9 +8,31 @@
  * to map static => real JIRA URLs by replacing a prefix.
  *
  * @author Christian Weiske <christian.weiske@netresearch.de>
+ * @link   https://docs.atlassian.com/jira/REST/4.4.3/
+ * @link   https://docs.atlassian.com/jira/REST/5.1/
  */
-require_once __DIR__ . '/../data/config.php';
+require_once 'Console/CommandLine.php';
 require_once 'HTTP/Request2.php';
+
+$parser = new Console_CommandLine();
+$parser->description = 'Export JIRA issues to static HTML files';
+$parser->version = '0.1.0';
+$parser->addOption('config', array(
+    'short_name'  => '-c',
+    'long_name'   => '--config',
+    'description' => 'path to configuration FILE',
+    'help_name'   => 'FILE',
+    'action'      => 'StoreString',
+    'default'     => __DIR__ . '/../data/config.php'
+));
+try {
+    $result = $parser->parse();
+    $configFile = $result->options['config'];
+} catch (Exception $exc) {
+    $parser->displayError($exc->getMessage());
+}
+
+require_once $configFile;
 
 $htmlTemplate = <<<HTM
 <?xml version="1.0" encoding="utf-8"?>

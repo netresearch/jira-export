@@ -1,4 +1,6 @@
 /www/*.html
+/www/*/*.html
 /data/config.php
+/data/config-*.php
 /www/last-update
 /README.html
