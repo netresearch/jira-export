@@ -25,6 +25,10 @@ Setup
 #. Setup cron to run the export every 15 minutes.
 
 
+Note: If you use jira 4.4, only export once a day.
+``jira-export`` doesn't support partial updates with it.
+
+
 Export some projects only
 =========================
 If you care about only a fraction of the projects in a JIRA instance,

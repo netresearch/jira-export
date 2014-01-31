@@ -1,6 +1,10 @@
 /www/*.html
+/www/last-update
+
 /www/*/*.html
+/www/*/last-update
+
 /data/config.php
 /data/config-*.php
-/www/last-update
+
 /README.html
