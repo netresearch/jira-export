@@ -535,8 +535,10 @@ CSS
             continue;
         }
         preg_match('#browse/([A-Z]+-[0-9]+)#', $href, $matches);
-        $issueId = $matches[1];
-        $anchor->setAttribute("href", $issueId . '.html');
+        if (isset($matches[1])) {
+            $issueId = $matches[1];
+            $anchor->setAttribute("href", $issueId . '.html');
+        }
     }
     $html = $xpath->document->saveHTML();
 
