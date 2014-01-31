@@ -30,10 +30,15 @@ Dependencies
 ============
 
 * PHP
-* HTTP_Request2 from PEAR::
+* Atlassian JIRA, at least version 4.4 with activated REST API.
+  Version 5.1 or higher recommended.
+* ``Console_CommandLine`` from PEAR::
+
+    $ pear install console_commandline
+
+* ``HTTP_Request2`` from PEAR::
 
     $ pear install http_request2
-
 
 =============
 Similar tools

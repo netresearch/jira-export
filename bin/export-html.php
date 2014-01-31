@@ -117,20 +117,43 @@ class PagingJsonIterator implements Iterator
 
     protected function loadData()
     {
-        $hreq = clone $this->http;
-        $hreq->setUrl(
+        $obj = fetch_json(
             str_replace(
                 array('{startAt}', '{pageSize}'),
                 array($this->position, $this->pageSize),
                 $this->url
             )
         );
-        $res = $hreq->send();
-        $obj = json_decode($res->getBody());
         $this->totalCount = $obj->{$this->jsonVarTotal};
         $this->data = $obj->{$this->jsonVarData};
         $this->dataPos = $this->position;
     }
+}
+
+function fetch_json($url)
+{
+    global $http;
+    $hreq = clone $http;
+    $res = $hreq->setUrl($url)->send();
+
+    if (intval($res->getStatus() / 100) > 2) {
+        echo sprintf("Error fetching data from %s\n", $hreq->getUrl());
+        echo sprintf(
+            "Status: %s %s\n", $res->getStatus(), $res->getReasonPhrase()
+        );
+        exit(2);
+    }
+
+    list($contentType) = explode(';', $res->getHeader('content-type'));
+    if ($contentType !== 'application/json') {
+        echo sprintf("Error fetching data from %s\n", $hreq->getUrl());
+        echo "Content type is not application/json but "
+            . $contenType . "\n";
+        exit(3);
+    }
+
+    $json = json_decode($res->getBody());
+    return $json;
 }
 
 $lufile = $export_dir . 'last-update';
@@ -153,7 +176,7 @@ if (file_exists($lufile)) {
     if (time() - $lutime <= 14 * 86400) {
         $pi = new PagingJsonIterator(
             $http,
-            $jira_url . 'rest/api/2/search'
+            $jira_url . 'rest/api/latest/search'
             . '?startAt={startAt}'
             . '&maxResults={pageSize}'
             . '&fields=key'
@@ -176,9 +199,7 @@ if (file_exists($lufile)) {
 }
 
 //fetch projects
-$hpr = clone $http;
-$pres = $hpr->setUrl($jira_url . 'rest/api/2/project')->send();
-$projects = json_decode($pres->getBody());
+$projects = fetch_json($jira_url . 'rest/api/latest/project');
 createProjectIndex($projects);
 foreach ($projects as $project) {
     if ($hasUpdated && !isset($updatedProjects[$project->key])) {
@@ -188,7 +209,7 @@ foreach ($projects as $project) {
     //fetch all issues
     $pi = new PagingJsonIterator(
         $http,
-        $jira_url . 'rest/api/2/search'
+        $jira_url . 'rest/api/latest/search'
         . '?startAt={startAt}'
         . '&maxResults={pageSize}'
         . '&fields=key,updated,summary,parent'
@@ -216,7 +237,7 @@ function downloadIssues(Iterator $issues, $project)
 
         $file = $export_dir . $issue->key . '.html';
 
-        if (file_exists($file)) {
+        if (file_exists($file) && isset($issue->fields->updated)) {
             $iDate = strtotime($issue->fields->updated);
             $fDate = filemtime($file);
             if ($iDate < $fDate) {
@@ -269,12 +290,19 @@ function createProjectIndex($projects)
             . "<table border='0'>\n";
         usort($projects, 'compareProjects');
         foreach ($projects as $project) {
-            $body .= '<tr>'
-                . '<td>'
-                . sprintf(
+            if (isset($project->avatarUrls->{'16x16'})) {
+                $icon = sprintf(
                     '<img src="%s" alt="" width="16" height="16"/> ',
                     htmlspecialchars($project->avatarUrls->{'16x16'})
-                )
+                );
+            } else {
+                //jira 4.4 rest-api v1
+                $icon = '';
+            }
+
+            $body .= '<tr>'
+                . '<td>'
+                . $icon
                 . '</td>'
                 . '<td>'
                 . '<a href="' . $project->key . '.html">'
@@ -348,6 +376,14 @@ function renderIssuesList($arIssues)
     uksort($arIssues, 'strnatcmp');
     foreach ($arIssues as $arIssue) {
         $issue = $arIssue['issue'];
+        if (!isset($issue->fields)) {
+            //jira 4.4 has no summary
+            $issue->fields = (object) array(
+                'key'     => $issue->key,
+                'summary' => ''
+            );
+        }
+
         $html .= '<li>'
             . '<a href="' . $issue->key . '.html">'
             . $issue->key . ': '
@@ -374,9 +410,9 @@ function compareProjects($a, $b)
     list($bC) = explode(':', $b->name, 2);
 
     if ($aC != $bC) {
-        return strnatcmp($aC, $bC);
+        return strnatcasecmp($aC, $bC);
     } else {
-        return strnatcmp($a->name, $b->name);
+        return strnatcasecmp($a->name, $b->name);
     }
 }
 
@@ -388,6 +424,13 @@ function getLastUpdateHtml()
 function adjustIssueHtml($html, $project)
 {
     global $jira_url, $topbar;
+
+    if (!isset($project->id)) {
+        //jira 4.4
+        preg_match('#BrowseProject\\.jspa\\?id=([0-9]+)#', $html, $matches);
+        $project->id = $matches[1];
+    }
+
     $html = str_replace(
         array(
             '<body>',
