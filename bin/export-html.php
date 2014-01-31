@@ -190,7 +190,7 @@ if (file_exists($lufile)) {
         foreach ($pi as $issue) {
             list($pkey,) = explode('-', $issue->key);
             if (count($allowedProjectKeys) == 0
-                && !array_search($pkey, $allowedProjectKeys)
+                || array_search($pkey, $allowedProjectKeys)
             ) {
                 $updatedProjects[$pkey] = true;
             }
