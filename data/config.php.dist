@@ -3,5 +3,10 @@ $jira_user = 'FIXME';
 $jira_password = 'FIXME';
 $jira_url = 'https://jira.example.com/jira/';
 $export_dir = __DIR__ . '/../www/';
+
+//array of project keys (empty: export all)
+$allowedProjectKeys = array();
+
+//additional html to prepend to all html files
 $topbar = '';
 ?>

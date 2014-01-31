@@ -22,7 +22,24 @@ Setup
 #. Install dependencies
 #. Run the initial import: ``$ ./bin/export-html.php``
 #. Setup the web server document root to ``www/``
-#. Setup cron to run the export every night
+#. Setup cron to run the export every 15 minutes.
+
+
+Export some projects only
+=========================
+If you care about only a fraction of the projects in a JIRA instance,
+you can choose to export those only.
+
+Simply adjust ``$allowedProjectKeys`` in your configuration file::
+
+    $allowedProjectKeys = array('FOO', 'BAR');
+
+
+Multiple JIRA instances
+=======================
+Use the ``-c`` command line option:
+
+   $ ./bin/export-html.php -c data/config-another.customer.php
 
 
 ============

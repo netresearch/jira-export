@@ -7,16 +7,18 @@
  * Note that we do not link to .html files since I want to be able
  * to map static => real JIRA URLs by replacing a prefix.
  *
- * @author Christian Weiske <christian.weiske@netresearch.de>
- * @link   https://docs.atlassian.com/jira/REST/4.4.3/
- * @link   https://docs.atlassian.com/jira/REST/5.1/
+ * @package JiraExport
+ * @author  Christian Weiske <christian.weiske@netresearch.de>
+ * @license AGPL https://www.gnu.org/licenses/agpl
+ * @link    https://docs.atlassian.com/jira/REST/4.4.3/
+ * @link    https://docs.atlassian.com/jira/REST/5.1/
  */
 require_once 'Console/CommandLine.php';
 require_once 'HTTP/Request2.php';
 
 $parser = new Console_CommandLine();
 $parser->description = 'Export JIRA issues to static HTML files';
-$parser->version = '0.1.0';
+$parser->version = '0.2.0';
 $parser->addOption('config', array(
     'short_name'  => '-c',
     'long_name'   => '--config',
@@ -187,7 +189,11 @@ if (file_exists($lufile)) {
         );
         foreach ($pi as $issue) {
             list($pkey,) = explode('-', $issue->key);
-            $updatedProjects[$pkey] = true;
+            if (count($allowedProjectKeys) == 0
+                && !array_search($pkey, $allowedProjectKeys)
+            ) {
+                $updatedProjects[$pkey] = true;
+            }
         }
         ksort($updatedProjects);
         $hasUpdated = count($updatedProjects) > 0;
@@ -206,6 +212,12 @@ foreach ($projects as $project) {
         continue;
     }
     echo sprintf("%s - %s\n", $project->key, $project->name);
+    if (count($allowedProjectKeys) != 0
+        && !array_search($project->key, $allowedProjectKeys)
+    ) {
+        echo " skip\n";
+        continue;
+    }
     //fetch all issues
     $pi = new PagingJsonIterator(
         $http,
@@ -264,10 +276,16 @@ function downloadIssues(Iterator $issues, $project)
 
 function createProjectIndex($projects)
 {
-    global $export_dir, $htmlTemplate, $jira_url, $topbar;
+    global $allowedProjectKeys,
+        $export_dir, $htmlTemplate, $jira_url, $topbar;
 
     $categories = array();
     foreach ($projects as $project) {
+        if (count($allowedProjectKeys) != 0
+            && !array_search($project->key, $allowedProjectKeys)
+        ) {
+            continue;
+        }
         list($category) = explode(':', $project->name);
         $categories[$category][] = $project;
     }
