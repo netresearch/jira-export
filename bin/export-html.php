@@ -27,9 +27,17 @@ $parser->addOption('config', array(
     'action'      => 'StoreString',
     'default'     => __DIR__ . '/../data/config.php'
 ));
+$parser->addOption('silent', array(
+    'short_name'  => '-s',
+    'long_name'   => '--silent',
+    'description' => 'Do not output status messages',
+    'action'      => 'StoreTrue',
+    'default'     => false,
+));
 try {
     $result = $parser->parse();
     $configFile = $result->options['config'];
+    $silent = $result->options['silent'];
 } catch (Exception $exc) {
     $parser->displayError($exc->getMessage());
 }
@@ -132,6 +140,13 @@ class PagingJsonIterator implements Iterator
     }
 }
 
+function doLog($msg)
+{
+    global $silent;
+    if (!$silent) {
+        echo $msg;
+    }
+}
 function fetch_json($url)
 {
     global $http;
@@ -148,9 +163,11 @@ function fetch_json($url)
 
     list($contentType) = explode(';', $res->getHeader('content-type'));
     if ($contentType !== 'application/json') {
-        echo sprintf("Error fetching data from %s\n", $hreq->getUrl());
-        echo "Content type is not application/json but "
-            . $contenType . "\n";
+        doLog(sprintf("Error fetching data from %s\n", $hreq->getUrl()));
+        doLog(
+            "Content type is not application/json but "
+            . $contenType . "\n"
+        );
         exit(3);
     }
 
@@ -174,7 +191,7 @@ $hasUpdated = false;
 if (file_exists($lufile)) {
     //fetch list of projects updated since last export
     $lutime = strtotime(file_get_contents($lufile));
-    echo "Fetching projects updated since last export\n";
+    doLog("Fetching projects updated since last export\n");
     if (time() - $lutime <= 14 * 86400) {
         $pi = new PagingJsonIterator(
             $http,
@@ -197,7 +214,7 @@ if (file_exists($lufile)) {
         }
         ksort($updatedProjects);
         $hasUpdated = count($updatedProjects) > 0;
-        echo sprintf(" Found %d projects.\n", count($updatedProjects));
+        doLog(sprintf(" Found %d projects.\n", count($updatedProjects)));
         if (!$hasUpdated) {
             exit();
         }
@@ -211,11 +228,11 @@ foreach ($projects as $project) {
     if ($hasUpdated && !isset($updatedProjects[$project->key])) {
         continue;
     }
-    echo sprintf("%s - %s\n", $project->key, $project->name);
+    doLog(sprintf("%s - %s\n", $project->key, $project->name));
     if (count($allowedProjectKeys) != 0
         && !array_search($project->key, $allowedProjectKeys)
     ) {
-        echo " skip\n";
+        doLog(" skip\n");
         continue;
     }
     //fetch all issues
@@ -240,10 +257,10 @@ function downloadIssues(Iterator $issues, $project)
 {
     global $http, $jira_url, $export_dir;
 
-    echo ' ';
+    doLog(' ');
     foreach ($issues as $issue) {
         if (!isset($issue->key) || $issue->key == '') {
-            echo 'x';
+            doLog('x');
             continue;
         }
 
@@ -253,12 +270,12 @@ function downloadIssues(Iterator $issues, $project)
             $iDate = strtotime($issue->fields->updated);
             $fDate = filemtime($file);
             if ($iDate < $fDate) {
-                echo '.';
+                doLog('.');
                 continue;
             }
         }
 
-        echo 'n';
+        doLog('n');
         $hd = clone $http;
         $idres = $hd->setUrl(
             $jira_url . 'si/jira.issueviews:issue-html/'
@@ -271,7 +288,7 @@ function downloadIssues(Iterator $issues, $project)
             adjustIssueHtml($idres->getBody(), $project)
         );
     }
-    echo "\n";
+    doLog("\n");
 }
 
 function createProjectIndex($projects)
@@ -372,7 +389,7 @@ function createIssueIndex(Iterator $issues, $project)
             $arIssues[$issue->key]['issue'] = $issue;
         }
     }
-    echo sprintf(" %d issues\n", $count);
+    doLog(sprintf(" %d issues\n", $count));
 
     $body .= renderIssuesList($arIssues);
     $body .= getLastUpdateHtml();
