@@ -410,6 +410,9 @@ function renderIssuesList($arIssues)
     $html = "<ul>\n";
     uksort($arIssues, 'strnatcmp');
     foreach ($arIssues as $arIssue) {
+        if (empty($arIssue['issue'])) {
+            continue;
+        }
         $issue = $arIssue['issue'];
         if (!isset($issue->fields)) {
             //jira 4.4 has no summary
