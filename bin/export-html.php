@@ -236,8 +236,8 @@ foreach ($projects as $project) {
         continue;
     }
     doLog(sprintf("%s - %s\n", $project->key, $project->name));
-    if (count($allowedProjectKeys) != 0
-        && !array_search($project->key, $allowedProjectKeys)
+    if (count($allowedProjectKeys) > 0
+        && array_search($project->key, $allowedProjectKeys) === false
     ) {
         doLog(" skip\n");
         continue;
