@@ -140,6 +140,11 @@ class PagingJsonIterator implements Iterator
     }
 }
 
+function logError($msg)
+{
+    file_put_contents('php://stderr', $msg);
+}
+
 function doLog($msg)
 {
     global $silent;
@@ -154,17 +159,19 @@ function fetch_json($url)
     $res = $hreq->setUrl($url)->send();
 
     if (intval($res->getStatus() / 100) > 2) {
-        echo sprintf("Error fetching data from %s\n", $hreq->getUrl());
-        echo sprintf(
-            "Status: %s %s\n", $res->getStatus(), $res->getReasonPhrase()
+        logError(sprintf("Error fetching data from %s\n", $hreq->getUrl()));
+        logError(
+            sprintf(
+                "Status: %s %s\n", $res->getStatus(), $res->getReasonPhrase()
+            )
         );
         exit(2);
     }
 
     list($contentType) = explode(';', $res->getHeader('content-type'));
     if ($contentType !== 'application/json') {
-        doLog(sprintf("Error fetching data from %s\n", $hreq->getUrl()));
-        doLog(
+        logError(sprintf("Error fetching data from %s\n", $hreq->getUrl()));
+        logError(
             "Content type is not application/json but "
             . $contenType . "\n"
         );
