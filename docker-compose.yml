@@ -3,12 +3,11 @@ version: "3"
 services:
   httpd:
     image: nginx:alpine
-    environment:
-      - VIRTUAL_HOST=static-jira.sobol.nr
     volumes:
       - html:/usr/share/nginx/html:ro
     restart: always
-    network_mode: "bridge"
+    ports:
+    - "80:80"
 
   app:
     build: .
