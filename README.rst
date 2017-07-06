@@ -24,7 +24,7 @@ Setup classic
 #. ``$ cp data/config.php.dist /data/config.php``
 #. Adjust ``data/config.php``
 #. Install dependencies
-##. composer install
+    #. composer install
 #. Run the initial import: ``$ ./bin/export-html.php``
 #. Setup the web server document root to ``www/``
 #. Setup cron to run the export every 15 minutes.
