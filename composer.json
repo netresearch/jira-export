@@ -8,6 +8,10 @@
     "license": "AGPL 3",
     "authors": [
         {
+            "name": "Christian Weiske",
+            "email": "christian.weiske@netresearch.de"
+        },
+        {
             "name": "Sebastian Mendel",
             "email": "sebastian.mendel@netresearch.de"
         }
