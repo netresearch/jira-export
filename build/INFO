@@ -1,0 +1,15 @@
+jira-export build container
+---------------------------
+
+Run this buildbox through docker-compose in jira-export root directory.
+
+Command usage:
+
+    docker-compose run build <command>
+
+Commands:
+
+    build      Runs build and setup commands on jira-export directory
+               - executes composer install
+               - creates missing folders
+

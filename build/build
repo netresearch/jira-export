@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -ex
+
+cd /srv/www
+composer install --no-dev --optimize-autoloader --no-suggest --no-ansi --no-interaction
+
+chown -R `stat -c %u .` ./*
+chgrp -R `stat -c %g .` ./*
+
+chmod -R ugo-x+X ./*
+chmod ugo+x bin/*
+chmod ugo+x build/*.sh
+chmod ugo+x build/build
