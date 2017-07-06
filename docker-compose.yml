@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+  httpd:
+    image: nginx:alpine
+    environment:
+      - VIRTUAL_HOST=static-jira.sobol.nr
+    volumes:
+      - html:/usr/share/nginx/html:ro
+    restart: always
+    network_mode: "bridge"
+
+  app:
+    build: .
+    image: netresearch/jira-export
+    volumes:
+      - html:/opt/jira-export/www
+
+  build:
+    build: ./build/
+    volumes:
+      - .:/srv/www
+
+volumes:
+  html:

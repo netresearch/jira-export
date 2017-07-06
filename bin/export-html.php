@@ -478,7 +478,7 @@ function adjustIssueHtml($html, $project)
 
     $html = str_replace(
         '<body>',
-        <<<CSS
+        <<<HTML
 <style type="text/css">
 /* jira 5.1 */
 .aui-toolbar .toolbar-split.toolbar-split-right {
@@ -506,7 +506,7 @@ function adjustIssueHtml($html, $project)
     border-bottom-left-radius: 3px;
 }
 </style>
-CSS
+HTML
         . '<link rel="up" href="' . $project->key . '.html"/>'
         . '<link rel="index" href="' . $project->key . '.html"/>'
         . '<body>'

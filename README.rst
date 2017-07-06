@@ -13,21 +13,39 @@ After that initial run, only projects with modifications since the last
 export will get updated, which makes it possible to run the export
 as cronjob every 15 minutes.
 
-=====
-Setup
-=====
+Note: If you use jira 4.4, only export once a day.
+``jira-export`` doesn't support partial updates with it.
+
+=============
+Setup classic
+=============
+
 #. Clone git repository
 #. ``$ cp data/config.php.dist /data/config.php``
 #. Adjust ``data/config.php``
 #. Install dependencies
+##. composer install
 #. Run the initial import: ``$ ./bin/export-html.php``
 #. Setup the web server document root to ``www/``
 #. Setup cron to run the export every 15 minutes.
 
 
-Note: If you use jira 4.4, only export once a day.
-``jira-export`` doesn't support partial updates with it.
+=================
+Setup with docker
+=================
 
+#. Clone git repository
+#. ``$ cp data/config.php.dist /data/config.php``
+#. Adjust ``data/config.php``
+#. Adjust docker-compose.override.yml to your needs
+#. run docker-compose run build build
+#. run docker-compose up -d
+#. Setup cron to run the export every 15 minutes.
+
+
+========================
+Additional configuration
+========================
 
 Export some projects only
 =========================
@@ -53,13 +71,8 @@ Dependencies
 * PHP
 * Atlassian JIRA, at least version 4.4 with activated REST API.
   Version 5.1 or higher recommended.
-* ``Console_CommandLine`` from PEAR::
-
-    $ pear install console_commandline
-
-* ``HTTP_Request2`` from PEAR::
-
-    $ pear install http_request2
+* ``Console_CommandLine`` from PEAR
+* ``HTTP_Request2`` from PEAR
 
 =============
 Similar tools
