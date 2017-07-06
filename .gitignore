@@ -1,10 +1,5 @@
-/www/*.html
-/www/last-update
-
-/www/*/*.html
-/www/*/last-update
-
-/data/config.php
-/data/config-*.php
-
-/README.html
+/www/
+!/www/.htaccess
+!/www/.keep
+/data/
+!/data/config.php.dist
