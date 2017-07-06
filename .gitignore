@@ -3,3 +3,4 @@
 !/www/.keep
 /data/
 !/data/config.php.dist
+/vendor/

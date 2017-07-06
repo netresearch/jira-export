@@ -13,10 +13,10 @@
  * @link    https://docs.atlassian.com/jira/REST/4.4.3/
  * @link    https://docs.atlassian.com/jira/REST/5.1/
  */
-require_once 'Console/CommandLine.php';
-require_once 'HTTP/Request2.php';
 
-$parser = new Console_CommandLine();
+require_once realpath(__DIR__ . '/../vendor/autoload.php');
+
+$parser = new \Console_CommandLine();
 $parser->description = 'Export JIRA issues to static HTML files';
 $parser->version = '0.2.0';
 $parser->addOption('config', array(
@@ -38,11 +38,11 @@ try {
     $result = $parser->parse();
     $configFile = $result->options['config'];
     $silent = $result->options['silent'];
+    require_once $configFile;
 } catch (Exception $exc) {
     $parser->displayError($exc->getMessage());
 }
 
-require_once $configFile;
 
 $htmlTemplate = <<<HTM
 <?xml version="1.0" encoding="utf-8"?>
@@ -72,7 +72,7 @@ html, body {
 
 HTM;
 
-class PagingJsonIterator implements Iterator
+class PagingJsonIterator implements \Iterator
 {
     protected $http;
     protected $url;
@@ -185,7 +185,7 @@ function fetch_json($url)
 $lufile = $export_dir . 'last-update';
 $start = time();
 
-$http = new HTTP_Request2();
+$http = new \HTTP_Request2();
 $http->setConfig(
     array(
         'ssl_verify_peer' => false

@@ -1,0 +1,15 @@
+{
+    "name": "netresearch/jira-export",
+    "type": "project",
+    "require": {
+        "pear/http_request2": "^2.3",
+        "pear/console_commandline": "^1.2"
+    },
+    "license": "AGPL 3",
+    "authors": [
+        {
+            "name": "Sebastian Mendel",
+            "email": "sebastian.mendel@netresearch.de"
+        }
+    ]
+}
