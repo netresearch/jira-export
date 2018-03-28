@@ -20,12 +20,19 @@ Note: If you use jira 4.4, only export once a day.
 Setup classic
 =============
 
-#. Clone git repository
-#. ``$ cp data/config.php.dist /data/config.php``
-#. Adjust ``data/config.php``
+#. Switch to the folder you want to set this all up in, e.g. ``/home/myuser/``
+#. Clone git repository, e.g. ``git clone https://github.com/netresearch/jira-export.git``
+#. ``$ cp ./data/config.php.dist ./data/config.php``
+#. Set up/edit ``./data/config.php``
+#. Install composer (if you don't have it already).. https://getcomposer.org/
+    #. Run composer setup ``php composer-setup.php``
+    #. Check composer is working (esp behind a proxy) using ``php composer.phar diag``
+    #. If you have proxy problems, set up HTTP_PROXY, HTTPS_PROXY env variables
 #. Install dependencies
-    #. composer install
-#. Run the initial import: ``$ ./bin/export-html.php``
+    #. Run ``php composer.phar install``
+#. (Optional) Add proxy support to ``export-html.php``. Go to line 191 and add..
+    ``'proxy_host'        => 'myproxy', 'proxy_port'        => 8080``
+#. Run the initial import: ``php ./bin/export-html.php``
 #. Setup the web server document root to ``www/``
 #. Setup cron to run the export every 15 minutes.
 
