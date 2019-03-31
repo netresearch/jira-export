@@ -62,7 +62,7 @@ html, body {
 }
   </style>
  </head>
- <body>
+ <body class="container">
   %TOPBAR%
   <div id="content">
 %BODY%
@@ -329,7 +329,7 @@ function createProjectIndex($projects)
     $lastCategory = null;
     foreach ($categories as $category => $projects) {
         $body .= '<h2>' . htmlspecialchars($category) . '</h2>'
-            . "<table border='0'>\n";
+            . "<table class=\"table\" border='0'>\n";
         usort($projects, 'compareProjects');
         foreach ($projects as $project) {
             if (isset($project->avatarUrls->{'16x16'})) {
@@ -509,7 +509,7 @@ function adjustIssueHtml($html, $project)
 HTML
         . '<link rel="up" href="' . $project->key . '.html"/>'
         . '<link rel="index" href="' . $project->key . '.html"/>'
-        . '<body>'
+        . '<body class="container">'
         . $topbar,
         $html
     );
@@ -547,6 +547,9 @@ HTML
             $html
         );
     }
+
+    $html = str_replace('tableBorder', 'table table-sm', $html);
+    $html = str_replace('padding: 2px;', 'padding: 10px;', $html);
 
     //make issue links local (but not "View issue in Jira" link)
     //dependencies
