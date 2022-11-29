@@ -206,7 +206,7 @@ function fetch_json($url)
                 "Status: %s %s\n", $res->getStatus(), $res->getReasonPhrase()
             )
         );
-        exit(2);
+        throw new ErrorException("Cannot fetch URL $url");
     }
 
     list($contentType) = explode(';', $res->getHeader('content-type'));
@@ -241,20 +241,25 @@ if (file_exists($lufile)) {
     $lutime = strtotime(file_get_contents($lufile));
     doLog("Fetching projects updated since last export\n");
     if (time() - $lutime <= 14 * 86400) {
-        $pi = new PagingJsonIterator($http, $jira_url . 'rest/api/latest/search'
-            . '?startAt={startAt}' . '&maxResults={pageSize}' . '&fields=key' . '&jql=' . urlencode('updated>= "' .
-                date('Y-m-d H:i', $lutime) . '"'), 500);
-        foreach ($pi as $issue) {
-            list($pkey, ) = explode('-', $issue->key);
-            if (!shouldSkipProject($pkey)) {
-                $updatedProjects[$pkey] = true;
-            }
+        try {
+            $pi = new PagingJsonIterator($http, $jira_url . 'rest/api/latest/search'
+                . '?startAt={startAt}' . '&maxResults={pageSize}' . '&fields=key' . '&jql=' . urlencode('updated>= "' .
+                    date('Y-m-d H:i', $lutime) . '"'), 500);
+
+            foreach ($pi as $issue) {
+             list($pkey, ) = explode('-', $issue->key);
+             if (!shouldSkipProject($pkey)) {
+                  $updatedProjects[$pkey] = true;
+              }
+           }
+         ksort($updatedProjects);
+         $hasUpdated = count($updatedProjects) > 0;
+          doLog(sprintf(" Found %d projects.\n", count($updatedProjects)));
+          if (!$hasUpdated) {
+               exit();
         }
-        ksort($updatedProjects);
-        $hasUpdated = count($updatedProjects) > 0;
-        doLog(sprintf(" Found %d projects.\n", count($updatedProjects)));
-        if (!$hasUpdated) {
-            exit();
+        } catch (ErrorException $e) {
+            logError("Cannot fetch projects with PagingJsonIterator");
         }
     }
 }
@@ -268,24 +273,28 @@ foreach ($projects as $project) {
     }
     doLog(sprintf("%s - %s\n", $project->key, $project->name));
     if (
-    shouldSkipProject($project->key)
+        shouldSkipProject($project->key)
     ) {
         doLog(" skip\n");
         continue;
     }
     //fetch all issues
+    try {
     $pi = new PagingJsonIterator(
-        $http,
-        $jira_url . 'rest/api/latest/search'
-        . '?startAt={startAt}'
+          $http,
+          $jira_url . 'rest/api/latest/search'
+           . '?startAt={startAt}'
         . '&maxResults={pageSize}'
-        . '&fields=key,updated,summary,parent'
-        . '&jql=project%3D%22' . urlencode($project->key) . '%22',
-        500
+            . '&fields=key,updated,summary,parent'
+         . '&jql=project%3D%22' . urlencode($project->key) . '%22',
+          500
     );
-
     createIssueIndex($pi, $project);
     downloadIssues($pi, $project);
+ } catch (ErrorException $e) {
+    logError("Cannot fetch issues for project key " . $project->key);
+    continue;
+    }
 }
 
 //so we only have to update next time instead of exporting everything again
