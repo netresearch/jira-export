@@ -2,7 +2,7 @@ FROM php:7-alpine
 
 RUN set -ex \
  && echo "http://mirror1.hs-esslingen.de/pub/Mirrors/alpine/latest-stable/main" > /etc/apk/repositories \
- && apk update \
+ && apk update && apk add unzip \
  && apk upgrade --available \
 # Clean up anything else
  && rm -rf \

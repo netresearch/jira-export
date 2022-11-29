@@ -2,7 +2,8 @@
 set -ex
 
 cd /srv/www
-composer install --no-dev --optimize-autoloader --no-suggest --no-ansi --no-interaction
+composer clear-cache
+composer install --no-plugins --no-dev --optimize-autoloader --no-ansi --no-interaction
 
 chown -R `stat -c %u .` ./*
 chgrp -R `stat -c %g .` ./*

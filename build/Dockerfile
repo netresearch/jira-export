@@ -1,15 +1,11 @@
-FROM php:7-alpine
+FROM php:7-bullseye
 
 RUN set -ex \
- && echo "http://mirror1.hs-esslingen.de/pub/Mirrors/alpine/latest-stable/main" > /etc/apk/repositories \
- && apk update \
- && apk upgrade --available \
- && apk add bash \
-# Clean up anything else
+ && apt-get update && apt-get install -y bash vim unzip \
  && rm -rf \
     /tmp/* \
     /var/tmp/* \
-    /var/cache/apk/*
+    /var/cache/apt/*
 
 #
 # composer

@@ -10,13 +10,14 @@ services:
     - "80:80"
 
   app:
+    image: jira-export:local
     build: .
-    image: netresearch/jira-export
     volumes:
       - html:/opt/jira-export/www
+      - ./data:/opt/jira-export/data
 
   build:
-    build: ./build/
+    build: build
     volumes:
       - .:/srv/www
 

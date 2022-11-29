@@ -19,21 +19,27 @@ require_once realpath(__DIR__ . '/../vendor/autoload.php');
 $parser = new \Console_CommandLine();
 $parser->description = 'Export JIRA issues to static HTML files';
 $parser->version = '0.2.0';
-$parser->addOption('config', array(
-    'short_name'  => '-c',
-    'long_name'   => '--config',
-    'description' => 'path to configuration FILE',
-    'help_name'   => 'FILE',
-    'action'      => 'StoreString',
-    'default'     => __DIR__ . '/../data/config.php'
-));
-$parser->addOption('silent', array(
-    'short_name'  => '-s',
-    'long_name'   => '--silent',
-    'description' => 'Do not output status messages',
-    'action'      => 'StoreTrue',
-    'default'     => false,
-));
+$parser->addOption(
+    'config',
+    array(
+        'short_name' => '-c',
+        'long_name' => '--config',
+        'description' => 'path to configuration FILE',
+        'help_name' => 'FILE',
+        'action' => 'StoreString',
+        'default' => __DIR__ . '/../data/config.php'
+    )
+);
+$parser->addOption(
+    'silent',
+    array(
+        'short_name' => '-s',
+        'long_name' => '--silent',
+        'description' => 'Do not output status messages',
+        'action' => 'StoreTrue',
+        'default' => false,
+    )
+);
 try {
     $result = $parser->parse();
     $configFile = $result->options['config'];
@@ -42,32 +48,67 @@ try {
 } catch (Exception $exc) {
     $parser->displayError($exc->getMessage());
 }
+$cssTemplate = <<<CSS
+<style type="text/css">
+                /* jira 5.1 */
+                .aui-toolbar .toolbar-split.toolbar-split-right {
+                float: none;
+                }
+                .aui-toolbar .toolbar-group {
+                margin-bottom: 0px;
+                }
+                #previous-view, .previous-view {
+                padding-top: 16px;
+                padding-bottom: 5px;
+                }
+                /* jira 4.4 */
+                .previous-view > a {
+                background: linear-gradient(to bottom,#fff 0,#f2f2f2 100%);
+                border-color: #ccc;
+                border-style: solid;
+                border-width: 1px;
+                color: #333;
+                font-weight: normal;
+                display: inline-block;
+                margin: 0;
+                padding: 4px 10px;
+                border-top-left-radius: 3px;
+                border-bottom-left-radius: 3px;
+                }
+                </style>
 
+CSS;
 
 $htmlTemplate = <<<HTM
 <?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
- <head>
-  <title>%TITLE%</title>
-  <link rel="index" href="./"/>
-  <style type="text/css">
-html, body {
-    margin: 0px;
-    padding: 0px;
-    border: none;
-}
-#content {
-    margin: 2ex;
-}
-  </style>
- </head>
- <body class="container">
-  %TOPBAR%
-  <div id="content">
-%BODY%
-  </div>
- </body>
+
+<head>
+    <title>%TITLE%</title>
+    <link rel="index" href="./" />
+    <style type="text/css">
+        html,
+        body {
+            margin: 0px;
+            padding: 0px;
+            border: none;
+        }
+
+        #content {
+            margin: 2ex;
+        }
+    </style>
+</head>
+
+<body class="container">
+    %TOPBAR%
+    <div id="content">
+        %BODY%
+    </div>
+</body>
+
 </html>
 
 HTM;
@@ -173,7 +214,7 @@ function fetch_json($url)
         logError(sprintf("Error fetching data from %s\n", $hreq->getUrl()));
         logError(
             "Content type is not application/json but "
-            . $contenType . "\n"
+            . $contentType . "\n"
         );
         exit(3);
     }
@@ -200,22 +241,12 @@ if (file_exists($lufile)) {
     $lutime = strtotime(file_get_contents($lufile));
     doLog("Fetching projects updated since last export\n");
     if (time() - $lutime <= 14 * 86400) {
-        $pi = new PagingJsonIterator(
-            $http,
-            $jira_url . 'rest/api/latest/search'
-            . '?startAt={startAt}'
-            . '&maxResults={pageSize}'
-            . '&fields=key'
-            . '&jql=' . urlencode(
-                'updated >= "' . date('Y-m-d H:i', $lutime) . '"'
-            ),
-            500
-        );
+        $pi = new PagingJsonIterator($http, $jira_url . 'rest/api/latest/search'
+            . '?startAt={startAt}' . '&maxResults={pageSize}' . '&fields=key' . '&jql=' . urlencode('updated>= "' .
+                date('Y-m-d H:i', $lutime) . '"'), 500);
         foreach ($pi as $issue) {
-            list($pkey,) = explode('-', $issue->key);
-            if (count($allowedProjectKeys) == 0
-                || array_search($pkey, $allowedProjectKeys)
-            ) {
+            list($pkey, ) = explode('-', $issue->key);
+            if (!shouldSkipProject($pkey)) {
                 $updatedProjects[$pkey] = true;
             }
         }
@@ -236,8 +267,8 @@ foreach ($projects as $project) {
         continue;
     }
     doLog(sprintf("%s - %s\n", $project->key, $project->name));
-    if (count($allowedProjectKeys) > 0
-        && array_search($project->key, $allowedProjectKeys) === false
+    if (
+    shouldSkipProject($project->key)
     ) {
         doLog(" skip\n");
         continue;
@@ -265,12 +296,17 @@ function downloadIssues(Iterator $issues, $project)
     global $http, $jira_url, $export_dir;
 
     doLog(' ');
+    $counter = 0;
+    $globalCounter = 0;
     foreach ($issues as $issue) {
+        $counter += 1;
+        if ($counter % 100 == 0) {
+            doLog("[$counter issues]\n");
+        }
         if (!isset($issue->key) || $issue->key == '') {
             doLog('x');
             continue;
         }
-
         $file = $export_dir . $issue->key . '.html';
 
         if (file_exists($file) && isset($issue->fields->updated)) {
@@ -281,7 +317,6 @@ function downloadIssues(Iterator $issues, $project)
                 continue;
             }
         }
-
         doLog('n');
         $hd = clone $http;
         $idres = $hd->setUrl(
@@ -298,18 +333,23 @@ function downloadIssues(Iterator $issues, $project)
     doLog("\n");
 }
 
+function shouldSkipProject($pkey)
+{
+    global $allowedProjectKeys, $bannedProjectKeys;
+    return (count($allowedProjectKeys) > 0 && !in_array($pkey, $allowedProjectKeys)) ||
+        (in_array($pkey, $bannedProjectKeys));
+}
 function createProjectIndex($projects)
 {
-    global $allowedProjectKeys,
-        $export_dir, $htmlTemplate, $jira_url, $topbar;
+    global $allowedProjectKeys, $bannedProjectKeys,
+    $export_dir, $htmlTemplate, $jira_url, $topbar;
 
     $categories = array();
     foreach ($projects as $project) {
-        if (count($allowedProjectKeys) != 0
-            && !array_search($project->key, $allowedProjectKeys)
-        ) {
+        if (shouldSkipProject($project->key)) {
             continue;
         }
+        ;
         list($category) = explode(':', $project->name);
         $categories[$category][] = $project;
     }
@@ -334,7 +374,7 @@ function createProjectIndex($projects)
         foreach ($projects as $project) {
             if (isset($project->avatarUrls->{'16x16'})) {
                 $icon = sprintf(
-                    '<img src="%s" alt="" width="16" height="16"/> ',
+                    '<img src="%s" alt="" width="16" height="16" /> ',
                     htmlspecialchars($project->avatarUrls->{'16x16'})
                 );
             } else {
@@ -355,7 +395,8 @@ function createProjectIndex($projects)
                 . '<a href="' . $project->key . '.html">'
                 . htmlspecialchars($project->name)
                 . '</a>'
-                . "</td></tr>\n";
+                . "</td>
+            </tr>\n";
         }
         $body .= "</table>\n";
     }
@@ -424,7 +465,7 @@ function renderIssuesList($arIssues)
         if (!isset($issue->fields)) {
             //jira 4.4 has no summary
             $issue->fields = (object) array(
-                'key'     => $issue->key,
+                'key' => $issue->key,
                 'summary' => ''
             );
         }
@@ -468,7 +509,7 @@ function getLastUpdateHtml()
 
 function adjustIssueHtml($html, $project)
 {
-    global $jira_url, $topbar;
+    global $jira_url, $topbar, $cssTemplate;
 
     if (!isset($project->id)) {
         //jira 4.4
@@ -477,39 +518,17 @@ function adjustIssueHtml($html, $project)
     }
 
     $html = str_replace(
-        '<body>',
-        <<<HTML
-<style type="text/css">
-/* jira 5.1 */
-.aui-toolbar .toolbar-split.toolbar-split-right {
-    float: none;
-}
-.aui-toolbar .toolbar-group {
-    margin-bottom: 0px;
-}
-#previous-view, .previous-view {
-    padding-top: 16px;
-    padding-bottom: 5px;
-}
-/* jira 4.4 */
-.previous-view > a {
-    background: linear-gradient(to bottom,#fff 0,#f2f2f2 100%);
-    border-color: #ccc;
-    border-style: solid;
-    border-width: 1px;
-    color: #333;
-    font-weight: normal;
-    display: inline-block;
-    margin: 0;
-    padding: 4px 10px;
-    border-top-left-radius: 3px;
-    border-bottom-left-radius: 3px;
-}
-</style>
-HTML
-        . '<link rel="up" href="' . $project->key . '.html"/>'
-        . '<link rel="index" href="' . $project->key . '.html"/>'
-        . '<body class="container">'
+        '
+
+        <body>',
+        $cssTemplate
+        . '
+            <link rel="up" href="' . $project->key . '.html" />'
+        . '
+            <link rel="index" href="' . $project->key . '.html" />'
+        . '
+
+            <body class="container">'
         . $topbar,
         $html
     );
@@ -518,7 +537,8 @@ HTML
             'Back to previous view',
             '&lt;&lt; Zur vorherigen Ansicht'
         ),
-        'View issue in Jira', $html
+        'View issue in Jira',
+        $html
     );
     $html = str_replace(
         //make project link local
@@ -539,8 +559,10 @@ HTML
         //jira 5.1
         $html = str_replace(
             //add project link
-            '<li class="toolbar-item">',
-            '<li class="toolbar-item">'
+            '
+                <li class="toolbar-item">',
+            '
+                <li class="toolbar-item">'
             . '<a href="' . $project->key . '.html" class="toolbar-trigger">All issues</a>'
             . '</li>'
             . '<li class="toolbar-item">',
@@ -556,9 +578,9 @@ HTML
     $doc = new DOMDocument();
     libxml_use_internal_errors(true);
     $doc->loadHTML($html);
-    $xpath   = new DOMXpath($doc);
+    $xpath = new DOMXpath($doc);
     $anchors = $xpath->query("/html/body/table//a[@href]");
-    $prefix  = $jira_url . 'browse/';
+    $prefix = $jira_url . 'browse/';
     foreach ($anchors as $anchor) {
         $href = $anchor->getAttribute("href");
         if (substr($href, 0, strlen($prefix)) != $prefix) {
