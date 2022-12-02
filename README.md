@@ -50,7 +50,7 @@ Set the keys you want to exclude in `$bannedProjectKeys`
 Use the `-c` command line option:
 
 ```sh
-docker-compose start app -c data/config-another.customer.php
+docker-compose run app /opt/jira-export/bin/export-html.php -c /opt/jira-export/data/config.another-customer.php
 ```
 
 ## Dependencies
