@@ -345,8 +345,8 @@ function downloadIssues(Iterator $issues, $project)
 function shouldSkipProject($pkey)
 {
     global $allowedProjectKeys, $bannedProjectKeys;
-    return (count($allowedProjectKeys) > 0 && !in_array($pkey, $allowedProjectKeys)) ||
-        (in_array($pkey, $bannedProjectKeys));
+    return (count($allowedProjectKeys) > 0 && !in_array($pkey, $allowedProjectKeys, true)) ||
+        (in_array($pkey, $bannedProjectKeys, true));
 }
 function createProjectIndex($projects)
 {

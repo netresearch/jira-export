@@ -7,12 +7,6 @@ RUN set -ex \
     /var/tmp/* \
     /var/cache/apt/*
 
-#
-# composer
-#
-# https://getcomposer.org/download/
-# https://getcomposer.org/doc/faqs/how-to-install-composer-programmatically.md
-#
 ADD install-composer.sh /install-composer.sh
 RUN chmod ugo+x /install-composer.sh
 RUN /install-composer.sh \

@@ -7,10 +7,9 @@ services:
       - html:/usr/share/nginx/html:ro
     restart: always
     ports:
-    - "80:80"
+    - "8180:80"
 
   app:
-    image: jira-export:local
     build: .
     volumes:
       - html:/opt/jira-export/www

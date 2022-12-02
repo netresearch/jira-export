@@ -1,4 +1,4 @@
-jira-export build container
+get-out-of-jira build container
 ---------------------------
 
 Run this buildbox through docker-compose in jira-export root directory.
