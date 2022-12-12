@@ -1,5 +1,5 @@
 {
-    "name": "matchaxnb/get-out-of-jira",
+    "name": "netresearch/jira-export",
     "type": "project",
     "require": {
         "pear/http_request2": "^2.3",
