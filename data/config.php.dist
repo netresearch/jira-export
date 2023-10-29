@@ -1,6 +1,10 @@
 <?php
 $jira_user = 'FIXME';
+
+// for Jira Cloud instances use an API key as password
 $jira_password = 'FIXME';
+
+// for Jira Cloud instances remove the "/jira" suffix
 $jira_url = 'https://jira.example.com/jira/';
 $export_dir = __DIR__ . '/../www/';
 
