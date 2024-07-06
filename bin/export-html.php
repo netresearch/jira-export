@@ -214,7 +214,7 @@ if (file_exists($lufile)) {
         foreach ($pi as $issue) {
             list($pkey,) = explode('-', $issue->key);
             if (count($allowedProjectKeys) == 0
-                || array_search($pkey, $allowedProjectKeys)
+                || array_search($pkey, $allowedProjectKeys) !== false
             ) {
                 $updatedProjects[$pkey] = true;
             }
@@ -306,7 +306,7 @@ function createProjectIndex($projects)
     $categories = array();
     foreach ($projects as $project) {
         if (count($allowedProjectKeys) != 0
-            && !array_search($project->key, $allowedProjectKeys)
+            && array_search($project->key, $allowedProjectKeys) === false
         ) {
             continue;
         }
