@@ -1,4 +1,4 @@
-FROM php:7-alpine
+FROM php:8-alpine
 
 RUN set -ex \
  && echo "http://mirror1.hs-esslingen.de/pub/Mirrors/alpine/latest-stable/main" > /etc/apk/repositories \
