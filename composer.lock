@@ -61,26 +61,26 @@
         },
         {
             "name": "pear/http_request2",
-            "version": "v2.7.0",
+            "version": "v2.8.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/pear/HTTP_Request2.git",
-                "reference": "b1c61b71128045734d757c4d3d436457ace80ea7"
+                "reference": "ccb06dd1e71aceb96f7cde7994976e02a46c7d5f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/pear/HTTP_Request2/zipball/b1c61b71128045734d757c4d3d436457ace80ea7",
-                "reference": "b1c61b71128045734d757c4d3d436457ace80ea7",
+                "url": "https://api.github.com/repos/pear/HTTP_Request2/zipball/ccb06dd1e71aceb96f7cde7994976e02a46c7d5f",
+                "reference": "ccb06dd1e71aceb96f7cde7994976e02a46c7d5f",
                 "shasum": ""
             },
             "require": {
                 "pear/net_url2": "^2.2.0",
                 "pear/pear_exception": "^1.0.0",
-                "php": ">=5.6.0"
+                "php": ">=7.1"
             },
             "require-dev": {
                 "pear/log": "^1",
-                "yoast/phpunit-polyfills": "^1.0.0"
+                "yoast/phpunit-polyfills": "^4.0"
             },
             "suggest": {
                 "ext-curl": "Allows using cURL as a request backend.",
@@ -117,7 +117,7 @@
                 "issues": "https://github.com/pear/HTTP_Request2/issues",
                 "source": "https://github.com/pear/HTTP_Request2"
             },
-            "time": "2025-04-06T13:48:50+00:00"
+            "time": "2026-09-04T10:44:42+00:00"
         },
         {
             "name": "pear/net_url2",
