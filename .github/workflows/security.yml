@@ -7,8 +7,8 @@ on:
     branches: [main, master]
 
 jobs:
-  gitleaks:
-    uses: netresearch/.github/.github/workflows/gitleaks.yml@main
+  betterleaks:
+    uses: netresearch/.github/.github/workflows/betterleaks.yml@main
 
   dependency-review:
     if: github.event_name == 'pull_request'
