@@ -9,6 +9,9 @@ on:
 jobs:
   betterleaks:
     uses: netresearch/.github/.github/workflows/betterleaks.yml@main
+    permissions:
+      contents: read
+      security-events: write
 
   dependency-review:
     if: github.event_name == 'pull_request'
