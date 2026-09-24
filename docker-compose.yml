@@ -3,6 +3,14 @@ version: "3"
 services:
   httpd:
     image: nginx:alpine
+    security_opt:
+      - no-new-privileges:true
+    # nginx:alpine writes only its temp paths and pid/lock file
+    # (nginx -V: /var/cache/nginx/*, /run/nginx.pid, /run/nginx.lock)
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /run
     volumes:
       - html:/usr/share/nginx/html:ro
     restart: always
@@ -12,6 +20,10 @@ services:
   app:
     build: .
     image: netresearch/jira-export
+    security_opt:
+      - no-new-privileges:true
+    # export-html.php writes only to $export_dir (www/, the html volume)
+    read_only: true
     volumes:
       - html:/opt/jira-export/www
 
