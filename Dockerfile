@@ -15,6 +15,12 @@ ADD data/ /opt/jira-export/data/
 ADD vendor/ /opt/jira-export/vendor/
 ADD www/.htaccess /opt/jira-export/www/.htaccess
 
+# export-html.php writes only to $export_dir (www/), so it runs unprivileged.
+# The chown has to come before VOLUME: later changes to that path are dropped.
+RUN chown www-data:www-data /opt/jira-export/www
+
 VOLUME ["/opt/jira-export/www/"]
+
+USER www-data
 
 CMD ["/opt/jira-export/bin/export-html.php"]
