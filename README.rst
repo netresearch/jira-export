@@ -49,6 +49,12 @@ Setup with docker
 #. run docker-compose up -d
 #. Setup cron to run the export every 15 minutes.
 
+The export container runs as ``www-data``. An ``html`` volume created by
+an older image that ran as root still belongs to root; change its owner
+once before the next export::
+
+    $ docker-compose run --rm -u root app chown -R www-data:www-data /opt/jira-export/www
+
 
 ========================
 Additional configuration
